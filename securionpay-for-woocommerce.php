@@ -12,6 +12,8 @@ if (!defined('ABSPATH')) {
 	exit(); // Exit if accessed directly
 }
 
+require_once 'classes/SecurionpayCustomer.php';
+
 class Securionpay4WC {
     
     const VERSION = '1.0.5';
@@ -27,6 +29,7 @@ class Securionpay4WC {
 		$this->settings['live_public_key'] = isset($this->settings['live_public_key']) ? $this->settings['live_public_key'] : '';
 		$this->settings['live_secret_key'] = isset($this->settings['live_secret_key']) ? $this->settings['live_secret_key'] : '';
 		$this->settings['saved_cards'] = isset($this->settings['saved_cards']) ? $this->settings['saved_cards'] : 'yes';
+        $this->settings['3dsecure'] = isset($this->settings['3dsecure']) ? $this->settings['3dsecure'] : 'no';
 
 		// API Info
 		$this->settings['public_key'] = $this->settings['testmode'] == 'yes' ? $this->settings['test_public_key'] : $this->settings['live_public_key'];
@@ -37,8 +40,13 @@ class Securionpay4WC {
 		
 		// Hooks
 		add_filter('woocommerce_payment_gateways', array($this, 'addSecurionpayGateway'));
-		
-		// Localization
+
+        // Ajax 3DSecure mode function 
+        add_action('wp_ajax_nopriv_get3DSecureCartData', array($this, 'get3DSecureCartData'));
+        add_action('wp_ajax_get3DSecureCartData', array($this, 'get3DSecureCartData'));
+        add_action('wp_ajax_get3DSecureCardToken', array($this, 'get3DSecureCardToken'));
+
+        // Localization
 		load_plugin_textdomain('securionpay-for-woocommerce', false, dirname(plugin_basename(__FILE__)) . '/languages');
 	}
 
@@ -62,6 +70,36 @@ class Securionpay4WC {
 		global $securionpay4wc;
 		return is_user_logged_in() && $securionpay4wc->settings['saved_cards'] === 'yes';
 	}
+
+    public function get3DSecureCartData()
+    {
+        try {
+            echo json_encode(array(
+                'currency' => get_woocommerce_currency(),
+                'amount' => (int) (WC()->cart->get_total(null) * 100)
+            ));
+        } catch (Exception $e) {
+            echo '{}';
+        }
+        die;
+    }
+
+    public function get3DSecureCardToken()
+    {
+        $customer = new SecurionpayCustomer(get_current_user_id());
+        if (!$customer->getCustomerId()) {
+            echo '';
+        } else {
+            $cardIndex = isset($_POST['card_index']) ? $_POST['card_index'] : '';
+            $card = $customer->getCard($cardIndex);
+            if ($card) {
+                echo $card['id'];
+            } else {
+                echo '';
+            }
+        }
+        die;
+    }
 }
 
 $GLOBALS['securionpay4wc'] = new Securionpay4WC();
