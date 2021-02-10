@@ -45,7 +45,6 @@ class Securionpay4WC {
         // Ajax 3DSecure mode function 
         add_action('wp_ajax_nopriv_get3DSecureCartData', array($this, 'get3DSecureCartData'));
         add_action('wp_ajax_get3DSecureCartData', array($this, 'get3DSecureCartData'));
-        add_action('wp_ajax_get3DSecureCardToken', array($this, 'get3DSecureCardToken'));
 
         // Localization
 		load_plugin_textdomain('securionpay-for-woocommerce', false, dirname(plugin_basename(__FILE__)) . '/languages');
@@ -82,27 +81,6 @@ class Securionpay4WC {
             ));
         } catch (Exception $e) {
             echo '{}';
-        }
-        die;
-    }
-
-    public function get3DSecureCardToken()
-    {
-        try {
-            $customer = new SecurionpayCustomer(get_current_user_id());
-            if (!$customer->getCustomerId()) {
-                echo '';
-            } else {
-                $cardIndex = isset($_POST['card_index']) ? $_POST['card_index'] : '';
-                $card = $customer->getCard($cardIndex);
-                if ($card) {
-                    echo $card['id'];
-                } else {
-                    echo '';
-                }
-            }
-        } catch (Exception $e) {
-            echo '';
         }
         die;
     }

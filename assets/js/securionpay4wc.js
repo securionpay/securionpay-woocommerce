@@ -82,42 +82,6 @@ jQuery(function($) {
             }
         }
 
-        // Saved card
-        if (
-            $('#payment_method_securionpay4wc').is(':checked') &&
-            $('input[name="securionpay4wc-card"]').length > 0 &&
-            $('input[name="securionpay4wc-card"]:checked').val() !== 'new' &&
-            securionpay4wc_data.threedsecure === 'yes'
-        ) {
-            if (!$('.securionpay4wc-token, .securionpay4wc-error').length) {
-                var cardIndex = parseInt($('input[name="securionpay4wc-card"]:checked').val());
-
-                if (cardIndex >= 0) {
-                    $.ajax({
-                        method: 'POST',
-                        url: securionpay4wc_data.ajax_url,
-                        data: {
-                            action: 'get3DSecureCardToken',
-                            card_index: cardIndex
-                        }
-                    })
-                    .done(function (result) {
-                        responseHandlerFor3DSecure({
-                            id: result
-                        });
-                    })
-                    .fail(function () {
-                        responseHandlerFor3DSecure({
-                            id: ''
-                        });
-                    });
-
-                    event.stopImmediatePropagation();
-                    return false;
-                }
-            }
-        }
-
         return true;
     }
 

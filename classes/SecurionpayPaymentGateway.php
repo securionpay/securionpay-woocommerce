@@ -100,7 +100,6 @@ class SecurionpayPaymentGateway extends WC_Payment_Gateway {
 			$customer = null;
 			$cardId = null;
 			$newCard = false;
-			$defaultCardId = null;
 
 			if ($this->allowSavedCards()) {
 				$customer = new SecurionpayCustomer(get_current_user_id());
@@ -111,24 +110,10 @@ class SecurionpayPaymentGateway extends WC_Payment_Gateway {
 					$customer->save();
 				}
 
-                $cardId = isset($_POST['securionpay4wc-token']) ? $_POST['securionpay4wc-token'] : '';
                 $cardIndex = isset($_POST['securionpay4wc-card']) ? $_POST['securionpay4wc-card'] : '';
-                if ($cardIndex == '' || $cardIndex == 'new') {
-                    $newCard = true;
-                } else {
-                    if ($customer) {
-                        $card = $customer->getCard($cardIndex);
-                        if ($card) {
-                            $defaultCardId = $card['id'];
-                        }
-                    }
-                }
-
-                if (!$cardId) {
-                    $card = $customer->getCard($cardIndex);
-                    if ($card) {
-                        $cardId = $card['id'];
-                    }
+                $card = $customer->getCard($cardIndex);
+                if ($card) {
+                    $cardId = $card['id'];
                 }
 			}
 
@@ -149,11 +134,7 @@ class SecurionpayPaymentGateway extends WC_Payment_Gateway {
 				if ($newCard) {
 					$customer->addCard($card->getId(), $card->getLast4(), $card->getExpMonth(), $card->getExpYear(), $card->getBrand());
 				}
-				if ($defaultCardId) {
-                    $customer->setDefaultCardId($defaultCardId);
-                } else {
-                    $customer->setDefaultCardId($card->getId());
-                }
+                $customer->setDefaultCardId($card->getId());
 				$customer->save();
 			}
 
