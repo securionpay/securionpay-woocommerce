@@ -13,6 +13,7 @@ if (!defined('ABSPATH')) {
 }
 
 require_once 'classes/SecurionpayCustomer.php';
+require_once 'classes/Helper/Currency.php';
 
 class Securionpay4WC {
     
@@ -74,9 +75,10 @@ class Securionpay4WC {
     public function get3DSecureCartData()
     {
         try {
+            $currency = strtoupper(get_woocommerce_currency());
             echo json_encode(array(
-                'currency' => get_woocommerce_currency(),
-                'amount' => (int) (WC()->cart->get_total(null) * 100)
+                'currency' => $currency,
+                'amount' => Currency::calculateMinorUnitsPriceForCurrency(WC()->cart->get_total(null), $currency)
             ));
         } catch (Exception $e) {
             echo '{}';
@@ -86,17 +88,21 @@ class Securionpay4WC {
 
     public function get3DSecureCardToken()
     {
-        $customer = new SecurionpayCustomer(get_current_user_id());
-        if (!$customer->getCustomerId()) {
-            echo '';
-        } else {
-            $cardIndex = isset($_POST['card_index']) ? $_POST['card_index'] : '';
-            $card = $customer->getCard($cardIndex);
-            if ($card) {
-                echo $card['id'];
-            } else {
+        try {
+            $customer = new SecurionpayCustomer(get_current_user_id());
+            if (!$customer->getCustomerId()) {
                 echo '';
+            } else {
+                $cardIndex = isset($_POST['card_index']) ? $_POST['card_index'] : '';
+                $card = $customer->getCard($cardIndex);
+                if ($card) {
+                    echo $card['id'];
+                } else {
+                    echo '';
+                }
             }
+        } catch (Exception $e) {
+            echo '';
         }
         die;
     }
