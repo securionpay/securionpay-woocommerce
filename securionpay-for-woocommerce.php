@@ -3,7 +3,7 @@
  * Plugin Name: SecurionPay for WooCommerce
  * Plugin URI: https://securionpay.com
  * Description: Use SecurionPay for collecting credit card payments on WooCommerce.
- * Version: 1.0.5
+ * Version: 1.1.0
  * Author: Securionpay
  * Author URI: https://securionpay.com
  */
@@ -17,7 +17,7 @@ require_once 'classes/Helper/Currency.php';
 
 class Securionpay4WC {
     
-    const VERSION = '1.0.5';
+    const VERSION = '1.1.0';
     
 	public function __construct() {
 		// Grab settings
