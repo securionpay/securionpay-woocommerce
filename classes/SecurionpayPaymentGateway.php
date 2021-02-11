@@ -100,7 +100,7 @@ class SecurionpayPaymentGateway extends WC_Payment_Gateway {
 			$customer = null;
 			$cardId = null;
 			$newCard = false;
-			
+
 			if ($this->allowSavedCards()) {
 				$customer = new SecurionpayCustomer(get_current_user_id());
 				if (!$customer->getCustomerId()) {
@@ -110,11 +110,11 @@ class SecurionpayPaymentGateway extends WC_Payment_Gateway {
 					$customer->save();
 				}
 
-				$cardIndex = isset($_POST['securionpay4wc-card']) ? $_POST['securionpay4wc-card'] : '';
-				$card = $customer->getCard($cardIndex);
-				if ($card) {
-					$cardId = $card['id'];
-				}
+                $cardIndex = isset($_POST['securionpay4wc-card']) ? $_POST['securionpay4wc-card'] : '';
+                $card = $customer->getCard($cardIndex);
+                if ($card) {
+                    $cardId = $card['id'];
+                }
 			}
 
 			if (!$cardId) {
@@ -134,7 +134,7 @@ class SecurionpayPaymentGateway extends WC_Payment_Gateway {
 				if ($newCard) {
 					$customer->addCard($card->getId(), $card->getLast4(), $card->getExpMonth(), $card->getExpYear(), $card->getBrand());
 				}
-				$customer->setDefaultCardId($card->getId());
+                $customer->setDefaultCardId($card->getId());
 				$customer->save();
 			}
 
@@ -252,6 +252,13 @@ class SecurionpayPaymentGateway extends WC_Payment_Gateway {
 						'title'       => __('SecurionPay API Live Public Key', 'securionpay-for-woocommerce'),
 						'default'     => '',
 				),
+                '3dsecure' => array(
+                    'type'        => 'checkbox',
+                    'title'       => __('3D Secure', 'securionpay-for-woocommerce'),
+                    'description' => __('Use 3D Secure functionality during payment.', 'securionpay-for-woocommerce'),
+                    'label'       => __('Turn on 3D Secure', 'securionpay-for-woocommerce'),
+                    'default'     => 'no'
+                ),
 		);
 	}
 
@@ -281,21 +288,35 @@ class SecurionpayPaymentGateway extends WC_Payment_Gateway {
 
 	public function load_scripts() {
 		global $securionpay4wc;
-	
+
+		$is3DSecure = (isset($securionpay4wc->settings['3dsecure']) && $securionpay4wc->settings['3dsecure'] === 'yes') ? true : false;
+
+		$scriptQueryParam = '';
+		if ($is3DSecure) {
+            $scriptQueryParam = '?mode=3ds';
+        }
+
 		wp_enqueue_script('securionpay', 'https://securionpay.com/js/securionpay.js', false, false, true);
-		wp_enqueue_script('securionpay4wc_js', plugins_url('assets/js/securionpay4wc.js', dirname(__FILE__)),
-				array('securionpay', 'wc-credit-card-form'), false, true);
-	
+		wp_enqueue_script(
+		    'securionpay4wc_js',
+            plugins_url('assets/js/securionpay4wc.js'.$scriptQueryParam, dirname(__FILE__)),
+            array('securionpay', 'wc-credit-card-form'),
+            false,
+            true
+        );
+
 		$data = array(
-			'publicKey' => $this->api->getPublicKey()
+			'publicKey' => $this->api->getPublicKey(),
+            'threedsecure' => $is3DSecure ? 'yes' : 'no',
+            'ajax_url' => admin_url('admin-ajax.php')
 		);
 
 		if (is_checkout_pay_page()) {
 			$order_key = urldecode($_GET['key']);
 			$order_id = absint(get_query_var('order-pay'));
 			$order = new WC_Order($order_id);
-	
-			if ($order->id == $order_id && $order->order_key == $order_key) {
+
+			if ($order->get_id() == $order_id && $order->order_key == $order_key) {
 				$data['billing_name'] = $order->billing_first_name . ' ' . $order->billing_last_name;
 				$data['billing_address_1'] = $order->billing_address_1;
 				$data['billing_address_2'] = $order->billing_address_2;

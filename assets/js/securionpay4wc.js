@@ -36,7 +36,12 @@ jQuery(function($) {
     }
 
     function formSubmit(event) {
-        if ($('#payment_method_securionpay4wc').is(':checked') && (!$('input[name="securionpay4wc-card"]').length || $('input[name="securionpay4wc-card"]:checked').val() === 'new')) {
+
+	    // New card
+        if (
+            $('#payment_method_securionpay4wc').is(':checked') &&
+            (!$('input[name="securionpay4wc-card"]').length || $('input[name="securionpay4wc-card"]:checked').val() === 'new')
+        ) {
 
             if (!$('.securionpay4wc-token, .securionpay4wc-error').length) {
                 var cardExpiry = $ccExpiry.payment('cardExpiryVal');
@@ -64,9 +69,13 @@ jQuery(function($) {
                             opacity: 0.6
                         }
                     });
-                    
-                	Securionpay.createCardToken(request, responseHandler);
-                    
+
+                    if (securionpay4wc_data.threedsecure === 'yes') {
+                        Securionpay.createCardToken(request, responseHandlerFor3DSecure);
+                    } else {
+                        Securionpay.createCardToken(request, responseHandler);
+                    }
+
                     event.stopImmediatePropagation();
                     return false;
                 }
@@ -129,6 +138,47 @@ jQuery(function($) {
         return errors;
     }
 
+    function responseHandlerFor3DSecure(response) {
+        if (!response.error) {
+            $.ajax({
+                method: 'POST',
+                url: securionpay4wc_data.ajax_url,
+                data: {
+                    action: 'get3DSecureCartData'
+                }
+            })
+            .done(function(result) {
+                result = JSON.parse(result);
+                if (typeof result.currency !== 'undefined' && typeof result.amount !== 'undefined' && result.amount > 0) {
+                    Securionpay.verifyThreeDSecure({
+                        amount: result.amount,
+                        currency: result.currency,
+                        card: response.id
+                    }, responseHandler);
+                } else {
+                    responseHandler(response);
+                }
+            })
+            .fail(function () {
+                responseHandler(response);
+            });
+
+        } else {
+            var errors = [{
+                'field' : 'securionpay4wc-error-type',
+                'value' : response.error.type
+            }, {
+                'field' : 'securionpay4wc-error-code',
+                'value' : response.error.code
+            }, {
+                'field' : 'securionpay4wc-error-message',
+                'value' : response.error.message
+            }];
+
+        	apprendFormErrors(errors);
+        }
+    }
+
     function responseHandler(response) {
         if (!response.error) {
             $form.append('<input type="hidden" class="securionpay4wc-token" name="securionpay4wc-token" value="' + response.id + '"/>');
@@ -144,7 +194,7 @@ jQuery(function($) {
                 'value' : response.error.message
             }];
 
-        	apprendFormErrors(errors);
+            apprendFormErrors(errors);
         }
 
         $form.submit();

@@ -3,7 +3,7 @@
  * Plugin Name: SecurionPay for WooCommerce
  * Plugin URI: https://securionpay.com
  * Description: Use SecurionPay for collecting credit card payments on WooCommerce.
- * Version: 1.0.5
+ * Version: 1.1.0
  * Author: Securionpay
  * Author URI: https://securionpay.com
  */
@@ -12,9 +12,12 @@ if (!defined('ABSPATH')) {
 	exit(); // Exit if accessed directly
 }
 
+require_once 'classes/SecurionpayCustomer.php';
+require_once 'classes/Helper/Currency.php';
+
 class Securionpay4WC {
     
-    const VERSION = '1.0.5';
+    const VERSION = '1.1.0';
     
 	public function __construct() {
 		// Grab settings
@@ -27,6 +30,7 @@ class Securionpay4WC {
 		$this->settings['live_public_key'] = isset($this->settings['live_public_key']) ? $this->settings['live_public_key'] : '';
 		$this->settings['live_secret_key'] = isset($this->settings['live_secret_key']) ? $this->settings['live_secret_key'] : '';
 		$this->settings['saved_cards'] = isset($this->settings['saved_cards']) ? $this->settings['saved_cards'] : 'yes';
+        $this->settings['3dsecure'] = isset($this->settings['3dsecure']) ? $this->settings['3dsecure'] : 'no';
 
 		// API Info
 		$this->settings['public_key'] = $this->settings['testmode'] == 'yes' ? $this->settings['test_public_key'] : $this->settings['live_public_key'];
@@ -37,8 +41,12 @@ class Securionpay4WC {
 		
 		// Hooks
 		add_filter('woocommerce_payment_gateways', array($this, 'addSecurionpayGateway'));
-		
-		// Localization
+
+        // Ajax 3DSecure mode function 
+        add_action('wp_ajax_nopriv_get3DSecureCartData', array($this, 'get3DSecureCartData'));
+        add_action('wp_ajax_get3DSecureCartData', array($this, 'get3DSecureCartData'));
+
+        // Localization
 		load_plugin_textdomain('securionpay-for-woocommerce', false, dirname(plugin_basename(__FILE__)) . '/languages');
 	}
 
@@ -62,6 +70,20 @@ class Securionpay4WC {
 		global $securionpay4wc;
 		return is_user_logged_in() && $securionpay4wc->settings['saved_cards'] === 'yes';
 	}
+
+    public function get3DSecureCartData()
+    {
+        try {
+            $currency = strtoupper(get_woocommerce_currency());
+            echo json_encode(array(
+                'currency' => $currency,
+                'amount' => Currency::calculateMinorUnitsPriceForCurrency(WC()->cart->get_total(null), $currency)
+            ));
+        } catch (Exception $e) {
+            echo '{}';
+        }
+        die;
+    }
 }
 
 $GLOBALS['securionpay4wc'] = new Securionpay4WC();

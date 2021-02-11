@@ -7,6 +7,7 @@ use SecurionPay\Request\RefundRequest;
 use SecurionPay\Request\CustomerRequest;
 use SecurionPay\Request\CardRequest;
 
+require_once 'Helper/Currency.php';
 require_once 'SecurionPay/Util/SecurionPayAutoloader.php';
 \SecurionPay\Util\SecurionPayAutoloader::register();
 
@@ -30,9 +31,10 @@ class SecurionpayApi {
 	 */
 	public function createCharge($customer, $cardId, $order) {
 		$request = new ChargeRequest();
-	
-		$request->amount((int)($order->get_total() * 100));
-		$request->currency(strtoupper($order->get_order_currency()));
+
+		$currency = strtoupper($order->get_order_currency());
+		$request->amount(Currency::calculateMinorUnitsPriceForCurrency($order->get_total(), $currency));
+		$request->currency($currency);
 	
 		$request->card($cardId);
 		if ($customer) {
